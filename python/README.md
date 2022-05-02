@@ -1,3 +1,24 @@
+- [1. python中时间的处理: time和datetime](#1-python中时间的处理-time和datetime)
+- [2. python起服务传输文件](#2-python起服务传输文件)
+- [3. 使用nc命令进行文件传输](#3-使用nc命令进行文件传输)
+- [4. linux下使用crontab设置定时任务](#4-linux下使用crontab设置定时任务)
+- [5. vim中常用的tips](#5-vim中常用的tips)
+- [6. python快速实现列表的交集差集并集](#6-python快速实现列表的交集差集并集)
+- [7.python获取一个文件的修改日期](#7python获取一个文件的修改日期)
+- [8. linux修改文件的权限](#8-linux修改文件的权限)
+- [9. flask使用GET和POST两种方式传输数据](#9-flask使用get和post两种方式传输数据)
+  - [GET方式](#get方式)
+  - [POST的方式](#post的方式)
+- [10. python中tqdm的使用详解](#10-python中tqdm的使用详解)
+- [11. Faiss召回加速另外实现cos的计算](#11-faiss召回加速另外实现cos的计算)
+- [12.python实现有放回抽样和无放回抽样](#12python实现有放回抽样和无放回抽样)
+- [13. 编辑距离的计算](#13-编辑距离的计算)
+- [14. 多个shell命令按顺序执行](#14-多个shell命令按顺序执行)
+- [15. loguru的用法](#15-loguru的用法)
+- [16. shell脚本监控当前程序是否在运行，否则重启](#16-shell脚本监控当前程序是否在运行否则重启)
+- [17. python设定某个函数超时报错](#17-python设定某个函数超时报错)
+- [18. 调用某个函数报错重试](#18-调用某个函数报错重试)
+
 # 1. python中时间的处理: time和datetime
 
 ```python
