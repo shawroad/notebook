@@ -18,6 +18,7 @@
 - [16. shell脚本监控当前程序是否在运行，否则重启](#16-shell脚本监控当前程序是否在运行否则重启)
 - [17. python设定某个函数超时报错](#17-python设定某个函数超时报错)
 - [18. 调用某个函数报错重试](#18-调用某个函数报错重试)
+- [19. 使用numba加速python代码](#19-使用numba加速python代码)
 
 # 1. python中时间的处理: time和datetime
 
@@ -621,6 +622,60 @@ def demo_func1():
 
 if __name__ == '__main__':
     demo_func1()   # 如果三次都错误  则最后进行异常的抛出
+```
+
+# 19. 使用numba加速python代码
+
+numba中的jit可以是代码只编译一次。大大加快了执行的速度。这里加速肯定是对那些代码不改变的函数。如果改变，肯定又得重新编译。
+
+```python
+'''
+jit： just in time compilation  只编译一次，对那些不做改变函数可以使用
+'''
+from numba import jit
+# pip install numba -i https://pypi.douban.com/simple/
+import random
+import time
+
+
+def calc_pi(n=1000):
+    # 标准计算圆面积
+    acc = 0
+    for i in range(n):
+        x = random.random()
+        y = random.random()
+        if (x ** 2 + y ** 2) < 1.0:
+            acc += 1
+    return 4 * acc / n
+
+
+# @jit()
+@jit(nopython=True)
+def calc_pi_jit(n=1000):
+    # 使用numba中的jit进行加速   # 装饰器就是函数包函数
+    acc = 0
+    for i in range(n):
+        x = random.random()
+        y = random.random()
+        if (x ** 2 + y ** 2) < 1.0:
+            acc += 1
+    return 4 * acc / n
+
+
+if __name__ == '__main__':
+    n = 10000000
+    s = time.time()
+    pi = calc_pi(n)
+    e = time.time()
+    print(pi)
+    print('执行时间:', e - s)    # 执行时间: 3.3722853660583496
+
+    s = time.time()
+    pi = calc_pi_jit(n)
+    e = time.time()
+    print(pi)
+    print('执行时间:', e - s)  # 执行时间: 0.43329310417175293
+
 ```
 
 
