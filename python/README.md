@@ -1,24 +1,50 @@
 - [1. python中时间的处理: time和datetime](#1-python中时间的处理-time和datetime)
+
 - [2. python起服务传输文件](#2-python起服务传输文件)
+
 - [3. 使用nc命令进行文件传输](#3-使用nc命令进行文件传输)
+
 - [4. linux下使用crontab设置定时任务](#4-linux下使用crontab设置定时任务)
+
 - [5. vim中常用的tips](#5-vim中常用的tips)
+
 - [6. python快速实现列表的交集差集并集](#6-python快速实现列表的交集差集并集)
+
 - [7.python获取一个文件的修改日期](#7python获取一个文件的修改日期)
+
 - [8. linux修改文件的权限](#8-linux修改文件的权限)
+
 - [9. flask使用GET和POST两种方式传输数据](#9-flask使用get和post两种方式传输数据)
   - [GET方式](#get方式)
   - [POST的方式](#post的方式)
+  
 - [10. python中tqdm的使用详解](#10-python中tqdm的使用详解)
+
 - [11. Faiss召回加速另外实现cos的计算](#11-faiss召回加速另外实现cos的计算)
+
 - [12.python实现有放回抽样和无放回抽样](#12python实现有放回抽样和无放回抽样)
+
 - [13. 编辑距离的计算](#13-编辑距离的计算)
+
 - [14. 多个shell命令按顺序执行](#14-多个shell命令按顺序执行)
+
 - [15. loguru的用法](#15-loguru的用法)
+
 - [16. shell脚本监控当前程序是否在运行，否则重启](#16-shell脚本监控当前程序是否在运行否则重启)
+
 - [17. python设定某个函数超时报错](#17-python设定某个函数超时报错)
+
 - [18. 调用某个函数报错重试](#18-调用某个函数报错重试)
+
 - [19. 使用numba加速python代码](#19-使用numba加速python代码)
+
+- [20. 浅谈装饰器](#20-浅谈装饰器)
+
+  - [函数作为参数进行传递](#函数作为参数进行传递)
+  - [函数的嵌套](#函数的嵌套)
+  - [实现一个装饰器](#实现一个装饰器)
+
+  
 
 # 1. python中时间的处理: time和datetime
 
@@ -676,6 +702,101 @@ if __name__ == '__main__':
     print(pi)
     print('执行时间:', e - s)  # 执行时间: 0.43329310417175293
 
+```
+
+# 20. 浅谈装饰器
+
+## 函数作为参数进行传递
+
+```python
+def double(x):
+    return x * 2
+
+
+def triple(x):
+    return x * 3
+
+
+def calc_num(func, x):
+    print(func(x))
+
+
+if __name__ == '__main__':
+    calc_num(double, 3)   
+    calc_num(triple, 3)
+    # 输出:
+    # 6
+    # 9
+    # 可以看出 可以将函数作为参数进行传递。类比c++中的函数指针
+```
+
+## 函数的嵌套
+
+```python
+
+def get_multiple_func(n):
+    def multiple(x):
+        return n * x
+    return multiple
+
+
+if __name__ == '__main__':
+    double = get_multiple_func(2)
+    triple = get_multiple_func(3)
+    # 以上的两个调用返回的都是函数
+
+    # 接着调用
+    print(double(3))  # 才是真正调用内部的函数
+    print(triple(3))
+    # 输出:
+    # 6
+    # 9
+```
+
+## 实现一个装饰器
+
+```python
+import time
+
+
+# 一般意义上的装饰器可以认为输入是函数 输出也是函数
+def timeit(f):
+    def wrapper(*args, **kwargs):
+        '''
+        这里之所以要传*args和**kwargs就是为了通用性
+        不管你这个函数有多少个参数 都不会影响我装饰器中
+        计算时间的任务
+        '''
+        start = time.time()
+        ret = f(*args, **kwargs)
+        print('当前函数花费时间:', time.time() - start)
+        return ret
+    return wrapper
+
+
+@timeit
+def my_func(x):
+    return x * 2
+
+
+@timeit
+def add(x, y):
+    return x + y
+
+
+if __name__ == '__main__':
+    print(my_func(10))
+    print('*'*50)
+    print(add(1, 1))
+    '''
+    输出:
+    当前函数花费时间: 1.1920928955078125e-06
+    20
+    **************************************************
+    当前函数花费时间: 9.5367431640625e-07
+    2
+    '''
+    # 结论 在函数a上面加一个装饰器b   调用其实类似于b(a)
 ```
 
 
