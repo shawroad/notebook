@@ -30,3 +30,6 @@ coding过程中一些容易遗忘的基本操作。
 
 # [Spark](https://github.com/shawroad/notebook/tree/main/spark)
 Spark的基础概念与实战
+
+# [shell](https://github.com/shawroad/notebook/tree/main/shell)
+shell常用的一些操作集合
