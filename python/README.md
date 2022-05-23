@@ -835,3 +835,35 @@ if __name__ == '__main__':
     # 总共花费时间: 6.1908791065216064
     # 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38,
 ```
+## 多线程的使用
+```python
+import time
+import requests
+from joblib import Parallel, delayed
+
+
+def run_task(url):
+    response = requests.get(url)
+    return response.status_code
+
+
+if __name__ == '__main__':
+    url = 'https://www.baidu.com'
+    # 普通调用
+    s = time.time()
+    results = []
+    for i in range(20):
+        results.append(run_task(url))
+    e = time.time()
+    print("结果为:", results, '花费时间:', e - s)
+    # 结果为: [200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200] 
+    # 花费时间: 6.937748908996582
+
+    s = time.time()
+    # 显示指定线程  线程可以开很多   后面那个url是传的参数 可以传多个参数。
+    results = (Parallel(n_jobs=20, backend='threading')(delayed(run_task)(url) for i in range(20)))
+    e = time.time()
+    print('结果为:', results, '花费时间:', e - s)
+    # 结果为: [200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200] 
+    # 花费时间: 0.5266118049621582
+```
