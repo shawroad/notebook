@@ -44,6 +44,9 @@
   - [函数的嵌套](#函数的嵌套)
   - [实现一个装饰器](#实现一个装饰器)
 
+- [21. joblib实现快速实现多进程多线程](#21-joblib实现快速实现多进程多线程)
+  - [多进程的使用](#多进程的使用)
+  - [多线程的使用](#多线程的使用)
   
 
 # 1. python中时间的处理: time和datetime
@@ -799,5 +802,36 @@ if __name__ == '__main__':
     # 结论 在函数a上面加一个装饰器b   调用其实类似于b(a)
 ```
 
+# 21. joblib实现快速实现多进程多线程
+## 多进程的使用
+```python
+import time
+from joblib import Parallel, delayed
 
 
+def run_task(a, b):
+    time.sleep(1)
+    return a + b
+
+
+if __name__ == '__main__':
+    # 普通调用
+    s = time.time()
+    results = []
+    for i in range(20):
+        results.append(run_task(i, i))
+    e = time.time()
+    print("结果为:", results, '花费时间:', e - s)
+    # 结果为: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38] 花费时间: 20.055760145187378
+
+    s = time.time()
+    # 注意下面这种n_jobs=4 指的是多进程执行
+    results = (Parallel(n_jobs=4)(delayed(run_task)(i, i) for i in range(20)))
+    e = time.time()
+    print('总共花费时间:',  e - s)
+    for i in results:
+        print(i, end=', ')
+    # 结果为:
+    # 总共花费时间: 6.1908791065216064
+    # 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38,
+```
