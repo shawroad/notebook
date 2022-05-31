@@ -100,7 +100,7 @@
 
 ### 1. 创建文件夹
 
-**hadoop fs -mkdir [-p] <path> … **
+**hadoop fs -mkdir [-p] [<path> …]**
 
 > path 为待创建的目录
 >
@@ -175,7 +175,7 @@ hadoop fs -get /ifnxs/1.txt ./2.txt
 
 ### 6. 拷贝HDFS文件
 
-**hadoop fs -cp [-f] <src> … <dst> **
+**hadoop fs -cp [-f] <src> … <dst>**
 
 >  -f 覆盖目标文件（已存在下）
 
@@ -199,7 +199,7 @@ hadoop fs -appendToFile 1.txt 2.txt /ifnxs/1.txt
 
 ### 8. HDFS数据移动操作
 
-**hadoop fs -mv <src> … <dst> **
+**hadoop fs -mv <src> … <dst>**
 
 > 移动文件到指定文件夹下
 >
