@@ -12,6 +12,7 @@
     - [6. 拷贝HDFS文件](#6-拷贝hdfs文件)
     - [7. 追加数据到HDFS文件中](#7-追加数据到hdfs文件中)
     - [8. HDFS数据移动操作](#8-hdfs数据移动操作)
+    - [9. HDFS删除文件](#9-hdfs删除文件)
   - [HDFS写、读数据流程](#hdfs写读数据流程)
     - [Pipeline管道](#pipeline管道)
     - [ACK应答响应](#ack应答响应)
@@ -208,6 +209,12 @@ hadoop fs -appendToFile 1.txt 2.txt /ifnxs/1.txt
 ```shell
 hadoop fs -mv /ifnxs/1.txt /ifnxs/333.txt
 ```
+
+### 9. HDFS删除文件
+  
+从HDFS中删除文件：`hadoop fs -rm /file_name`
+
+从HDFS中删除文件夹：`hadoop fs -rm -r /folder_name`
 
 [其他命令](https://hadoop.apache.org/docs/r3.3.0/hadoop-project-dist/hadoop-common/FileSystemShell.html)
 
