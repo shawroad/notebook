@@ -12,6 +12,7 @@
   - [第二步: 加载model_jit.pt文件](#第二步-加载model_jitpt文件)
 - [9. pytorch模型结构的可视化](#9-pytorch模型结构的可视化)
 - [10. Transformers中BertTokenizer和BertTokenizerFast的速度对比](#10-transformers中berttokenizer和berttokenizerfast的速度对比)
+- [11. DiceLoss](#11-DiceLoss)
 
 
 # 1. pytorch保存并加载checkpoint
@@ -682,4 +683,40 @@ if __name__ == '__main__':
     test_batch_speed()   # 每次传入多个
 ```
 
+# 11. DiceLoss
+$$DiceLoss = 1 - \frac{2|X\cap Y|}{|X| + |Y|}$$
 
+|X|和|Y|分别代表X的所有元素之和和Y的所有元素之和。X∩Y代表的是两个矩阵原始对应位置相乘，然后求和。  后面那一大块描述的就是dice系数。如果两个矩阵越相似，则值越大。 1-dice系数则越小，即:loss。我们的要求肯定是让预测无限接近label.
+
+```python
+import torch
+from torch import nn
+
+
+class DiceLoss(nn.Module):
+    def __init__(self, weight=None, size_average=True):
+        super(DiceLoss, self).__init__()
+
+    def forward(self, inputs, targets, smooth=1):
+        inputs = torch.sigmoid(inputs)
+        inputs = inputs.view(-1)
+        targets = targets.view(-1)
+        intersection = (inputs * targets).sum()
+        dice = (2. * intersection + smooth) / (inputs.sum() + targets.sum() + smooth)
+        # 上面计算的dice为dice系数  1-dice系数  就是diceloss
+        return 1 - dice
+
+
+if __name__ == '__main__':
+    target = torch.tensor([[0], [1], [2], [1], [0]])   # 三分类
+
+    # 这里必须将标签转为one-hot形式。
+    batch_size, label_num = 5, 3
+    target_onthot = torch.zeros(batch_size, label_num).scatter_(1, target, 1)
+
+    logits = torch.rand(5, 3)
+    loss_func = DiceLoss()
+    loss = loss_func(logits, target_onthot)
+    print(loss)
+
+```
