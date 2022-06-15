@@ -771,4 +771,6 @@ def evaluate():
     ema.apply_shadow()
     # evaluate
     ema.restore()
+
+# 这里强调一下  在保存模型的之前 需要ema.apply_shadow()一下，即把ema后的权重更新到模型上，然后再保存。
 ```
