@@ -47,6 +47,8 @@
 - [21. joblib实现快速实现多进程多线程](#21-joblib实现快速实现多进程多线程)
   - [多进程的使用](#多进程的使用)
   - [多线程的使用](#多线程的使用)
+
+- [22. exec函数的使用](#22-exec函数的使用)
   
 
 # 1. python中时间的处理: time和datetime
@@ -868,3 +870,26 @@ if __name__ == '__main__':
     # 结果为: [200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200] 
     # 花费时间: 0.5266118049621582
 ```
+
+# 22. exec函数的使用
+exec可以用来执行一段函数代码。这个函数代码是一个字符串。比eval功能更强大。
+
+假设有一个文件file.txt,内容如下:
+```txt
+import random
+
+if __name__ == '__main__':
+    data = [random.randint(0, 10) for i in range(10)]
+    data.sort()
+    print(data)
+```
+
+接下来，写一个python脚本，读file.txt文件内容，然后用exec执行。
+```python
+with open('file.txt', 'r', encoding='utf8') as f:
+    content = f.read()
+
+exec(content)
+```
+
+输出结果: [1, 1, 1, 2, 4, 6, 9, 10, 10, 10]
