@@ -14,6 +14,7 @@
 - [10. Transformers中BertTokenizer和BertTokenizerFast的速度对比](#10-transformers中berttokenizer和berttokenizerfast的速度对比)
 - [11. DiceLoss](#11-diceloss)
 - [12. EMA指数平均](#12-ema指数平均)
+- [13. 生成模型的几种解码方式](#13-生成模型的几种解码方式)
 
 
 # 1. pytorch保存并加载checkpoint
@@ -775,3 +776,121 @@ def evaluate():
 # 这里强调一下  在保存模型的之前 需要ema.apply_shadow()一下，即把ema后的权重更新到模型上，然后再保存。
 # 另外: 模型权重的指数滑动平均, 不参加梯度更新，只是记录滑动平均的参数，给预测使用，注意区别于类似adam一类的自适应学习率优化器, 针对一阶二阶梯度的指数滑动平均, 两者完全不同
 ```
+
+
+# 13. 生成模型的几种解码方式
+```python
+import torch
+import torch.nn.functional as F
+from transformers import BertTokenizer
+from transformers.models.gpt2 import GPT2LMHeadModel
+
+
+def greedy_decode():
+    input_txt = "最美不过下雨天"
+    input_ids = tokenizer(input_txt, return_tensors="pt")["input_ids"]
+    # print(input_ids)   # tensor([[ 101, 3297, 5401,  679, 6814,  678, 7433, 1921,  102]])
+    # print(input_ids.size())   # torch.Size([1, 9])
+    iterations = []
+    n_steps = 8  # 进行8步解码
+    choices_per_step = 5  # 每一步候选数量
+
+    with torch.no_grad():
+        for i in range(n_steps):
+            iteration = dict()
+            iteration['Input'] = tokenizer.decode(input_ids[0])
+            output = model(input_ids=input_ids)
+            # print(output.logits.size())  # torch.Size([1, 9, 21128])
+
+            # 取最后一个token的输出
+            next_token_logits = output.logits[0, -1, :]
+
+            # print(next_token_logis.size())   # torch.Size([1, 21128])
+            next_token_probs = torch.softmax(next_token_logits, dim=-1)
+            sorted_ids = torch.argsort(next_token_probs, dim=-1, descending=True)
+            # print(sorted_ids)   # tensor([ 5682,   741,   691,  ..., 12518, 11888, 10980])
+
+            for choice_idx in range(choices_per_step):
+                # 选取概率最大的五个
+                token_id = sorted_ids[choice_idx]
+                token_prob = next_token_probs[token_id].cpu().numpy()
+                token_choice = (
+                    # 得到对应的字符 + 概率值
+                    f"{tokenizer.decode(token_id)} ({100 * token_prob:.2f}%)"  # 取百分号两位数
+                )
+                iteration[f"Choice {choice_idx + 1}"] = token_choice
+            input_ids = torch.cat([input_ids, sorted_ids[None, 0, None]], dim=-1)  # 将概率最大的字符拼接到提示文本
+            iterations.append(iteration)
+        print(iterations)
+
+
+def default_decode():
+    # greedy search
+    max_length = 50
+    input_txt = "最美不过下雨天"
+    input_ids = tokenizer(input_txt, return_tensors="pt")["input_ids"]
+    output_greedy = model.generate(input_ids, max_length=max_length, do_sample=False)
+    print(output_greedy)
+    print(tokenizer.decode(output_greedy[0]))
+    # [CLS] 最 美 不 过 下 雨 天 [SEP] 色 彩 斑 斓 的 雨 天 ， 是 不 是 很 美 ？ 这 个 秋 天 ，
+    # 是 不 是 很 美 ？ 这 个 秋 天 ， 是 不 是 很 美 ？ 这 个 秋 天 ，
+
+
+def beam_search_decode():
+    def log_probs_from_logits(logits, labels):
+        logp = F.log_softmax(logits, dim=-1)
+        logp_label = torch.gather(logp, 2, labels.unsqueeze(2)).squeeze(-1)
+        return logp_label
+
+    def sequence_logprob(model, labels, input_len=0):
+        with torch.no_grad():
+            output = model(labels)
+            log_probs = log_probs_from_logits(
+                output.logits[:, :-1, :], labels[:, 1:])
+            seq_log_prob = torch.sum(log_probs[:, input_len:])
+        return seq_log_prob.cpu().numpy()
+
+    # 贪婪搜索
+    max_length = 50
+    input_txt = "最美不过下雨天"
+    input_ids = tokenizer(input_txt, return_tensors="pt")["input_ids"]
+    output_greedy = model.generate(input_ids, max_length=max_length, do_sample=False)
+    print(output_greedy)
+    logp = sequence_logprob(model, output_greedy, input_len=len(input_ids[0]))
+    print(tokenizer.decode(output_greedy[0]))
+    print(f"\nlog-prob: {logp:.2f}")
+
+    # beam_search搜索
+    output_beam = model.generate(input_ids, max_length=max_length, num_beams=3,
+                                 do_sample=False, no_repeat_ngram_size=2)  # no_repeat_ngram_size缓解重复
+    print(output_beam)
+    logp = sequence_logprob(model, output_beam, input_len=len(input_ids[0]))
+    print(tokenizer.decode(output_beam[0]))
+    print(f"\nlog-prob: {logp:.2f}")
+
+
+def temperature_sampling_decode():
+    torch.manual_seed(42)
+    max_length = 50
+    input_txt = "最美不过下雨天"
+    input_ids = tokenizer(input_txt, return_tensors="pt")["input_ids"]
+    output_temp = model.generate(input_ids, max_length=max_length, do_sample=True,
+                                 temperature=0.5, top_k=10)
+    print(output_temp)
+    print(tokenizer.decode(output_temp[0]))
+
+
+if __name__ == '__main__':
+    tokenizer = BertTokenizer(vocab_file='./gpt2_pretrain/vocab.txt')
+    model = GPT2LMHeadModel.from_pretrained('./gpt2_pretrain')
+    # default_decode()    # 默认的贪婪搜索
+    # greedy_decode()   # 手写greedy search
+    # beam_search_decode()   # 贪婪搜索和beam_search对比
+    temperature_sampling_decode()
+```
+上述代码中几个参数的介绍:
+- temperature(温度参数调整解码): 相当于是预测token时候，在softmax上加一个温度参数。 如果如果temperature参数大于1。 
+  整体的概率的量级都变小了，解码更多样。如果temperature参数小于1，则概率更极端。大的更大，小的更小，就接近于greedy search。
+- top_k(top_k解码): 是从预测的概率中挑选出K个最有可能的下一个单词，并且仅在这K个下一个单词之间重新为它们分配概率。 也就是对他们的概率进行softmax,以这样的概率随机采样。gpt2使用的方式。
+- top_p(top_p解码): top_p是设置一个累加概率的阈值。如果阈值大于top_p就停止。这前几个token就是我们的候选采样列表。然后重新分配概率，随机采这些token.
+- no_repeat_ngram_size参数: 是给过去生成的token施加惩罚，这个参数如果设置2，就是如果这个词过去出现两次了，下次如果还出现，将其下一个token的概率设置为零。
