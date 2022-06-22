@@ -781,14 +781,19 @@ def evaluate():
 # 13. 生成模型的几种解码方式
 ```python
 import torch
-import torch.nn.functional as F
-from transformers import BertTokenizer
+import os
+import re
+from config import set_args
 from transformers.models.gpt2 import GPT2LMHeadModel
+from transformers import BertTokenizer
+
+# transformers==4.10.2
 
 
-def greedy_decode():
-    input_txt = "最美不过下雨天"
-    input_ids = tokenizer(input_txt, return_tensors="pt")["input_ids"]
+def my_greedy_decode(ad):
+    # 自己手动实现
+    ad = "最美不过下雨天"
+    input_ids = tokenizer(ad, return_tensors="pt")["input_ids"]
     # print(input_ids)   # tensor([[ 101, 3297, 5401,  679, 6814,  678, 7433, 1921,  102]])
     # print(input_ids.size())   # torch.Size([1, 9])
     iterations = []
@@ -824,69 +829,84 @@ def greedy_decode():
         print(iterations)
 
 
-def default_decode():
-    # greedy search
-    max_length = 50
-    input_txt = "最美不过下雨天"
-    input_ids = tokenizer(input_txt, return_tensors="pt")["input_ids"]
-    output_greedy = model.generate(input_ids, max_length=max_length, do_sample=False)
-    print(output_greedy)
-    print(tokenizer.decode(output_greedy[0]))
-    # [CLS] 最 美 不 过 下 雨 天 [SEP] 色 彩 斑 斓 的 雨 天 ， 是 不 是 很 美 ？ 这 个 秋 天 ，
-    # 是 不 是 很 美 ？ 这 个 秋 天 ， 是 不 是 很 美 ？ 这 个 秋 天 ，
+def greedy_decode(ad):
+    max_length = len(ad) + 30
+    input_ids = tokenizer(ad, return_tensors='pt')['input_ids']
+    output_greedy = model.generate(input_ids, max_length=max_length, do_sample=False, eos_token_id=None)
+    res = tokenizer.decode(output_greedy[0])
+    vocab = res.split('[SEP]')[1:-1]
+    vocab = [v.replace(' ', '') for v in vocab]
+    return vocab
 
 
-def beam_search_decode():
-    def log_probs_from_logits(logits, labels):
-        logp = F.log_softmax(logits, dim=-1)
-        logp_label = torch.gather(logp, 2, labels.unsqueeze(2)).squeeze(-1)
-        return logp_label
-
-    def sequence_logprob(model, labels, input_len=0):
-        with torch.no_grad():
-            output = model(labels)
-            log_probs = log_probs_from_logits(
-                output.logits[:, :-1, :], labels[:, 1:])
-            seq_log_prob = torch.sum(log_probs[:, input_len:])
-        return seq_log_prob.cpu().numpy()
-
-    # 贪婪搜索
-    max_length = 50
-    input_txt = "最美不过下雨天"
-    input_ids = tokenizer(input_txt, return_tensors="pt")["input_ids"]
-    output_greedy = model.generate(input_ids, max_length=max_length, do_sample=False)
-    print(output_greedy)
-    logp = sequence_logprob(model, output_greedy, input_len=len(input_ids[0]))
-    print(tokenizer.decode(output_greedy[0]))
-    print(f"\nlog-prob: {logp:.2f}")
-
-    # beam_search搜索
-    output_beam = model.generate(input_ids, max_length=max_length, num_beams=3,
-                                 do_sample=False, no_repeat_ngram_size=2)  # no_repeat_ngram_size缓解重复
-    print(output_beam)
-    logp = sequence_logprob(model, output_beam, input_len=len(input_ids[0]))
-    print(tokenizer.decode(output_beam[0]))
-    print(f"\nlog-prob: {logp:.2f}")
+def beamsearch_decode(ad):
+    max_length = len(ad) + 30
+    input_ids = tokenizer(ad, return_tensors='pt')['input_ids']
+    output_beam = model.generate(input_ids, max_length=max_length, num_beams=3, do_sample=False, no_repeat_ngram_size=2)
+    res = tokenizer.decode(output_beam[0])
+    vocab = res.split('[SEP]')[1:-1]
+    vocab = [v.replace(' ', '') for v in vocab]
+    return vocab
 
 
-def temperature_sampling_decode():
-    torch.manual_seed(42)
-    max_length = 50
-    input_txt = "最美不过下雨天"
-    input_ids = tokenizer(input_txt, return_tensors="pt")["input_ids"]
-    output_temp = model.generate(input_ids, max_length=max_length, do_sample=True,
-                                 temperature=0.5, top_k=10)
-    print(output_temp)
-    print(tokenizer.decode(output_temp[0]))
+def greedy_sample_decode(ad):
+    max_length = len(ad) + 30
+    input_ids = tokenizer(ad, return_tensors='pt')['input_ids']
+    repetition_penalty = 1.1
+    temperature = 1
+    topk = 5
+    topp = 0.95
+    # 跟原始编码对齐
+    output_greedy_random = model.generate(input_ids, max_length=max_length, do_sample=True,
+                                          temperature=temperature, top_k=topk, top_p=topp,
+                                          repetition_penalty=repetition_penalty)
+    res = tokenizer.decode(output_greedy_random[0])
+    vocab = res.split('[SEP]')[1:-1]
+    vocab = [v.replace(' ', '') for v in vocab]
+    return vocab
+
+
+def beamsearch_sample_decode(ad):
+    max_length = len(ad) + 30
+    input_ids = tokenizer(ad, return_tensors='pt')['input_ids']
+    repetition_penalty = 1.1
+    num_beams = 3
+    temperature = 1
+    topk = 5
+    topp = 0.95
+    output_beamsearch_random = model.generate(input_ids, max_length=max_length, do_sample=True,
+                                              num_beams=num_beams, temperature=temperature, top_k=topk,
+                                              top_p=topp, repetition_penalty=repetition_penalty)
+    res = tokenizer.decode(output_beamsearch_random[0])
+    vocab = res.split('[SEP]')[1:-1]
+    vocab = [v.replace(' ', '') for v in vocab]
+    return vocab
 
 
 if __name__ == '__main__':
-    tokenizer = BertTokenizer(vocab_file='./gpt2_pretrain/vocab.txt')
-    model = GPT2LMHeadModel.from_pretrained('./gpt2_pretrain')
-    # default_decode()    # 默认的贪婪搜索
-    # greedy_decode()   # 手写greedy search
-    # beam_search_decode()   # 贪婪搜索和beam_search对比
-    temperature_sampling_decode()
+    args = set_args()
+    tokenizer = BertTokenizer.from_pretrained(args.pretrain_model_path)
+
+    # 加载模型
+    model_path = os.path.join(args.output_dir, 'model_epoch_{}'.format(9))
+    model = GPT2LMHeadModel.from_pretrained(model_path)
+
+    if torch.cuda.is_available():
+        model.cuda()
+    # model.half()
+    model.eval()
+    ad = '我女朋友是迪丽热巴'
+    keyword_list = greedy_decode(ad)
+    print(keyword_list)   # ['迪丽热巴', '媒体', '花絮', '三生三世', '嘉行迪丽热巴工作室']
+
+    keyword_list = beamsearch_decode(ad)
+    print(keyword_list)   # ['女明星', '媒体', '花絮', '三生三世', '快手', '空降', '虎年', '月刊']
+
+    keyword_list = greedy_sample_decode(ad)
+    print(keyword_list)   # ['热巴', '媒体', '花絮', '三生三世', 'cp', '表情包']
+
+    keyword_list = beamsearch_sample_decode(ad)
+    print(keyword_list)  # ['迪丽热巴', '媒体', '花絮', '三生三世', '嘉行迪丽热巴工作室']
 ```
 上述代码中几个参数的介绍:
 - temperature(温度参数调整解码): 相当于是预测token时候，在softmax上加一个温度参数。 如果如果temperature参数大于1。 
