@@ -15,6 +15,7 @@
 - [11. DiceLoss](#11-diceloss)
 - [12. EMA指数平均](#12-ema指数平均)
 - [13. 生成模型的几种解码方式](#13-生成模型的几种解码方式)
+- [14. mseloss中引入相关性损失](#14-mseloss中引入相关性损失)
 
 
 # 1. pytorch保存并加载checkpoint
@@ -914,3 +915,41 @@ if __name__ == '__main__':
 - top_k(top_k解码): 是从预测的概率中挑选出K个最有可能的下一个单词，并且仅在这K个下一个单词之间重新为它们分配概率。 也就是对他们的概率进行softmax,以这样的概率随机采样。gpt2使用的方式。
 - top_p(top_p解码): top_p是设置一个累加概率的阈值。如果阈值大于top_p就停止。这前几个token就是我们的候选采样列表。然后重新分配概率，随机采这些token.
 - no_repeat_ngram_size参数: 是给过去生成的token施加惩罚，这个参数如果设置2，就是如果这个词过去出现两次了，下次如果还出现，将其下一个token的概率设置为零。
+
+# 14. mseloss中引入相关性损失
+```python
+from torch import nn
+import torch
+
+
+class MSECorrLoss(nn.Module):
+    def __init__(self, p=1.5):
+        super(MSECorrLoss, self).__init__()
+        self.p = p
+        self.mseLoss = nn.MSELoss()
+
+    def forward(self, logits, target):
+        assert (logits.size() == target.size())
+        mse_loss = self.mseLoss(logits, target)   # 均方误差损失
+
+        logits_mean = logits.mean(dim=0)
+        logits_std = logits.std(dim=0)
+        logits_z = (logits - logits_mean) / logits_std   # 正态分布标准化
+
+        target_mean = target.mean(dim=0)
+        target_std = target.std(dim=0)
+        target_z = (target - target_mean) / target_std   # 正态分布标准化
+        corr_loss = 1 - ((logits_z * target_z).mean(dim=0))   # 后面的减数 就是计算两个分布的相关系数，然后用1减。越相关损失越小。
+        loss = mse_loss + self.p * corr_loss
+        return loss
+
+
+if __name__ == '__main__':
+    logits = torch.tensor([[0.1], [0.2], [0.2], [0.8], [0.4]], dtype=torch.float32)
+    label = torch.tensor([[0], [1], [0], [0], [1]], dtype=torch.float32)
+    print(logits.size())   # torch.Size([5, 1])   (batch_size, 1)
+    print(label.size())  # torch.Size([5, 1])   (batch_size, 1)
+    loss_func = MSECorrLoss()
+    loss = loss_func(logits, label)
+    print(loss)   # tensor([1.9949])
+```
