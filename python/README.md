@@ -1,54 +1,33 @@
 - [1. python中时间的处理: time和datetime](#1-python中时间的处理-time和datetime)
-
 - [2. python起服务传输文件](#2-python起服务传输文件)
-
 - [3. 使用nc命令进行文件传输](#3-使用nc命令进行文件传输)
-
 - [4. linux下使用crontab设置定时任务](#4-linux下使用crontab设置定时任务)
-
 - [5. vim中常用的tips](#5-vim中常用的tips)
-
 - [6. python快速实现列表的交集差集并集](#6-python快速实现列表的交集差集并集)
-
 - [7.python获取一个文件的修改日期](#7python获取一个文件的修改日期)
-
 - [8. linux修改文件的权限](#8-linux修改文件的权限)
-
 - [9. flask使用GET和POST两种方式传输数据](#9-flask使用get和post两种方式传输数据)
   - [GET方式](#get方式)
   - [POST的方式](#post的方式)
-  
 - [10. python中tqdm的使用详解](#10-python中tqdm的使用详解)
-
 - [11. Faiss召回加速另外实现cos的计算](#11-faiss召回加速另外实现cos的计算)
-
 - [12.python实现有放回抽样和无放回抽样](#12python实现有放回抽样和无放回抽样)
-
 - [13. 编辑距离的计算](#13-编辑距离的计算)
-
 - [14. 多个shell命令按顺序执行](#14-多个shell命令按顺序执行)
-
 - [15. loguru的用法](#15-loguru的用法)
-
 - [16. shell脚本监控当前程序是否在运行，否则重启](#16-shell脚本监控当前程序是否在运行否则重启)
-
 - [17. python设定某个函数超时报错](#17-python设定某个函数超时报错)
-
 - [18. 调用某个函数报错重试](#18-调用某个函数报错重试)
-
 - [19. 使用numba加速python代码](#19-使用numba加速python代码)
-
 - [20. 浅谈装饰器](#20-浅谈装饰器)
-
   - [函数作为参数进行传递](#函数作为参数进行传递)
   - [函数的嵌套](#函数的嵌套)
   - [实现一个装饰器](#实现一个装饰器)
-
 - [21. joblib实现快速实现多进程多线程](#21-joblib实现快速实现多进程多线程)
   - [多进程的使用](#多进程的使用)
   - [多线程的使用](#多线程的使用)
-
 - [22. exec函数的使用](#22-exec函数的使用)
+- [23. python中map和filter以及sorted的用法](#23-python中map和filter以及sorted的用法)
   
 
 # 1. python中时间的处理: time和datetime
@@ -59,6 +38,9 @@
 
 
   if __name__ == '__main__':
+      cur_time = str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")) + ', 星期' + str(datetime.datetime.now().isoweekday())
+      print(cur_time)  # 2022-06-24 19:02:25, 星期:5
+    
       hour_minutes_seconds = time.strftime('%H:%M:%S', time.localtime(time.time()))
       year_month_day = time.strftime('%Y-%m-%d ', time.localtime(time.time()))
       year_month_day_hour_minutes_seconds = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
@@ -893,3 +875,38 @@ exec(content)
 ```
 
 输出结果: [1, 1, 1, 2, 4, 6, 9, 10, 10, 10]
+
+# 23. python中map和filter以及sorted的用法
+```python
+def convert_int(item):
+    temp = int(item)
+    return temp
+
+
+def find_even(item):
+    # 找偶数
+    if item % 2 == 0:
+        return True
+    else:
+        return False
+
+
+if __name__ == '__main__':
+    data = ['12', '341', '244']
+    res = map(convert_int, data)
+    res = [i for i in res]
+    # print(res)   # [12, 341, 244]
+
+    res = filter(find_even, res)
+    res = [i for i in res]
+    # print(res)   # [12, 244]
+
+    # 对字典或者列表排序
+    dict1 = {'score1': 12, 'score2': 11, 'score3': 31, 'score4': 4}
+    dict1 = sorted(dict1.items(), key=lambda x: x[1])
+    # print(dict1)  # [('score4', 4), ('score2', 11), ('score1', 12), ('score3', 31)]
+
+    list1 = [[1, 12, 32], [23, 12, 22], [2, 12, 42], [1, 3, 3]]
+    list1 = sorted(list1, key=lambda x: x[2], reverse=True)
+    # print(list1)   # [[2, 12, 42], [1, 12, 32], [23, 12, 22], [1, 3, 3]]
+```
