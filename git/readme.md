@@ -51,6 +51,11 @@ git config --global user.name
 git config --global user.email 
 ```
 
+生成公私钥
+```shell
+ssh-keygen -t rsa -C "xxxx@qq.com"
+```
+
 ## 基本操作指令
 
 ![image-20220430215112817](git_notebook.assets/image-20220430215112817.png)
