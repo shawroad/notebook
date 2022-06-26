@@ -16,6 +16,7 @@
 - [12. EMA指数平均](#12-ema指数平均)
 - [13. 生成模型的几种解码方式](#13-生成模型的几种解码方式)
 - [14. mseloss中引入相关性损失](#14-mseloss中引入相关性损失)
+- [15. pytorch中model.train和model.eval以及torch.no_grad()的含义](#15-pytorch中modeltrain和modeleval以及torchno_grad的含义)
 
 
 # 1. pytorch保存并加载checkpoint
@@ -953,3 +954,8 @@ if __name__ == '__main__':
     loss = loss_func(logits, label)
     print(loss)   # tensor([1.9949])
 ```
+
+# 15. pytorch中model.train和model.eval以及torch.no_grad()的含义
+- model.train()的作用是 **启用 Batch Normalization 和 Dropout。** 如果模型中有BN层(Batch Normalization）和Dropout，需要在训练时添加model.train()。model.train()是保证BN层能够用到每一批数据的均值和方差。对于Dropout，model.train()是随机取一部分网络连接来训练更新参数。
+- model.eval()的作用是 **不启用 Batch Normalization 和 Dropout。** 如果模型中有BN层(Batch Normalization）和Dropout，在测试时添加model.eval()。model.eval()是保证BN层能够用全部训练数据的均值和方差，即测试过程中要保证BN层的均值和方差不变。对于Dropout，model.eval()是利用到了所有网络连接，即不进行随机舍弃神经元。
+- with torch.no_grad()则主要是用于停止autograd模块的工作，以起到加速和节省显存的作用。它的作用是将该with语句包裹起来的部分停止梯度的更新，从而节省了GPU算力和显存，但是并不会影响dropout和BN层的行为。
