@@ -28,6 +28,7 @@
   - [多线程的使用](#多线程的使用)
 - [22. exec函数的使用](#22-exec函数的使用)
 - [23. python中map和filter以及sorted的用法](#23-python中map和filter以及sorted的用法)
+- [24. faiss召回的进一步优化](24-faiss召回的进一步优化)
   
 
 # 1. python中时间的处理: time和datetime
@@ -909,4 +910,104 @@ if __name__ == '__main__':
     list1 = [[1, 12, 32], [23, 12, 22], [2, 12, 42], [1, 3, 3]]
     list1 = sorted(list1, key=lambda x: x[2], reverse=True)
     # print(list1)   # [[2, 12, 42], [1, 12, 32], [23, 12, 22], [1, 3, 3]]
+```
+
+# 24. faiss召回的进一步优化
+```python
+import faiss
+import numpy as np
+
+
+def batch_search():
+    # 随机产生一个向量库
+    nb = 300000  # 向量库的大小
+    xb = np.random.random((nb, d)).astype('float32')
+    xb[:, 0] += np.arange(nb) / 1000.
+
+    # 随机产生100个query向量
+    nq = 100  # 用这100个向量进行检索
+    xq = np.random.random((nq, d)).astype('float32')
+    xq[:, 0] += np.arange(nq) / 1000.
+
+    # 如果想计算cos  则是归一化 再内积 就是cos相似度
+    faiss.normalize_L2(xb)  # 原地归一化 无返回值
+    print(faiss_index.is_trained)
+
+    faiss_index.train(xb)  # 训练
+    print(faiss_index.is_trained)
+    faiss_index.add(xb)  # 训练完后  再将所有向量加入fiass中
+
+    faiss_index.nprobe = 10  # 每次检索 选取10个维诺空间
+    k = 10
+    xq = xq.tolist()
+    batch_size = 16  # 批量检索  每次传16个
+    n = len(xq) // batch_size
+    for i in range(n + 1):
+        cur_q = xq[i * batch_size: (i + 1) * batch_size]
+        vecs = np.array(cur_q, dtype='float32')
+        faiss.normalize_L2(vecs)
+        dis, ind = faiss_index.search(vecs, k)
+
+        for prob_list, index_list in zip(dis, ind):
+            print(index_list)
+            print(prob_list)
+            print('*' * 100)
+
+
+def direct_search(faiss_index):
+    # 有新的向量直接入库  无需训练  我们已经通过大批量的数据 训练了faiss的索引
+
+    # 在训练好的索引内加100万个向量
+    nb = 1000000  # 向量库的大小
+    xb = np.random.random((nb, d)).astype('float32')
+    xb[:, 0] += np.arange(nb) / 1000.
+    # np.random.shuffle(xb)   # 为了看出检索的效果
+    faiss.normalize_L2(xb)  # 原地归一化 无返回值
+    faiss_index.add(xb)  # 训练完后  再将所有向量加入fiass中
+
+    # 随机产生100个query向量
+    nq = 100  # 用这100个向量进行检索
+    xq = np.random.random((nq, d)).astype('float32')
+    xq[:, 0] += np.arange(nq) / 1000.
+
+    faiss_index.nprobe = 10  # 每次检索 选取10个维诺空间
+    k = 10
+    xq = xq.tolist()
+    batch_size = 16  # 批量检索  每次传16个
+    n = len(xq) // batch_size
+    for i in range(n + 1):
+        cur_q = xq[i * batch_size: (i + 1) * batch_size]
+        vecs = np.array(cur_q, dtype='float32')
+        faiss.normalize_L2(vecs)
+        dis, ind = faiss_index.search(vecs, k)
+
+        for prob_list, index_list in zip(dis, ind):
+            print(index_list)
+            print(prob_list)
+            print('*' * 100)
+
+
+if __name__ == '__main__':
+    d = 512   # 向量维度
+    np.random.seed(1234)
+
+    # 初始化faiss
+    nlist = 100   # 将向量库分割成多少维诺空间
+    quantizer = faiss.IndexFlatL2(d)  # the other index
+    faiss_index = faiss.IndexIVFFlat(quantizer, d, nlist, faiss.METRIC_INNER_PRODUCT)   # 内积方式
+
+    batch_search()   # 这种是每次添加新向量  就训练 肯定太耗资源了
+
+    # 我们这里可以先用大批量的向量训练 把索引库构建起来  以后就直接加向量就行
+    # 随机产生一个向量库
+    nb = 300000  # 向量库的大小
+    xb = np.random.random((nb, d)).astype('float32')
+    xb[:, 0] += np.arange(nb) / 1000.
+    # 如果想计算cos  则是归一化 再内积 就是cos相似度
+    faiss.normalize_L2(xb)  # 原地归一化 无返回值
+    print(faiss_index.is_trained)
+    faiss_index.train(xb)  # 训练
+    print(faiss_index.is_trained)
+    direct_search(faiss_index)
+
 ```
