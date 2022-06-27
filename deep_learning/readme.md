@@ -17,6 +17,7 @@
 - [13. 生成模型的几种解码方式](#13-生成模型的几种解码方式)
 - [14. mseloss中引入相关性损失](#14-mseloss中引入相关性损失)
 - [15. pytorch中model.train和model.eval以及torch.no_grad()的含义](#15-pytorch中modeltrain和modeleval以及torchno_grad的含义)
+- [16. pytorch中张量之间的运算](#16-pytorch中张量之间的运算)
 
 
 # 1. pytorch保存并加载checkpoint
@@ -959,3 +960,104 @@ if __name__ == '__main__':
 - model.train()的作用是 **启用 Batch Normalization 和 Dropout。** 如果模型中有BN层(Batch Normalization）和Dropout，需要在训练时添加model.train()。model.train()是保证BN层能够用到每一批数据的均值和方差。对于Dropout，model.train()是随机取一部分网络连接来训练更新参数。
 - model.eval()的作用是 **不启用 Batch Normalization 和 Dropout。** 如果模型中有BN层(Batch Normalization）和Dropout，在测试时添加model.eval()。model.eval()是保证BN层能够用全部训练数据的均值和方差，即测试过程中要保证BN层的均值和方差不变。对于Dropout，model.eval()是利用到了所有网络连接，即不进行随机舍弃神经元。
 - with torch.no_grad()则主要是用于停止autograd模块的工作，以起到加速和节省显存的作用。它的作用是将该with语句包裹起来的部分停止梯度的更新，从而节省了GPU算力和显存，但是并不会影响dropout和BN层的行为。
+
+# 16. pytorch中张量之间的运算
+```python
+import torch
+from einops import rearrange, repeat, reduce
+
+
+def func1():
+    # torch.einsum的使用
+    # 1. 矩阵乘
+    A = torch.randn(size=(32, 768))
+    B = torch.randn(size=(768, 32))
+    res = torch.einsum('ij,jk->ik', A, B)   # 矩阵乘
+    print(res.size())   # torch.Size([32, 32])
+
+    # 2. 带有batch的矩阵乘
+    A = torch.randn(size=(32, 128, 768))
+    B = torch.randn(size=(32, 768, 128))
+    res = torch.einsum('bij,bjk->bik', A, B)
+    print(res.size())   # torch.Size([32, 128, 128])
+
+    # 3. 点乘 哈达玛乘
+    A = torch.randn(size=(32, 768))
+    B = torch.randn(size=(1, 768))
+    res = torch.einsum('ik,jk->ik', A, B)   # 点乘
+    print(res.size())   # torch.Size([32, 768])
+
+    # 4. 对第一个维度（列）求和
+    A = torch.randn(size=(32, 128, 768))
+    res = torch.einsum('ijk->ik', A)
+    print(res.size())   # torch.Size([32, 768])
+
+    # 5. 维度变化
+    A = torch.randn(size=(32, 128, 768))
+    res = torch.einsum('ijk->ikj', A)
+    print(res.size())   # torch.Size([32, 768, 128])
+
+
+def func2():
+    # rearrange 用法
+    A = torch.randn(2, 3, 4)
+    C = rearrange(A, 'b l h -> b (l h)')   # # torch.Size([2, 12]) 把后面两个维度拼在一起。
+    print(C.size())   # torch.Size([2, 12])
+
+    C = rearrange(A, 'b l h -> l (b h)')  # 交换第一和第二维度，并把它们拼在一起。
+    print(C.size())    # torch.Size([3, 8])
+
+    # 交换第一、第二维度
+    C = rearrange(A, 'b l h -> l b h')
+    print(C.size())
+
+    # 拆分某个维度
+    A = torch.randn(3, 12, 9)
+    res = rearrange(A, 'b (m n) h -> b m n h', m=3)
+    # # 将中间的维度12看作是两个维度m和n  然后指定m或者n的维度  就可以将中间维度拆成m×n的样子
+    print(res.size())   # torch.Size([3, 3, 4, 9])
+
+    # 也可以进行维度的扩展 比如在最后面多加一个维度
+    a = torch.randn(3, 9, 9)
+    output_tensor = rearrange(a, 'a b (c l) -> a b c l', l=1)
+    print(output_tensor.size())  # # torch.Size([3, 9, 9, 1])
+
+
+def func3():
+    # repeat用法
+    # 1. 将张量沿某个维度重复n次
+    a = torch.randn(9, 9)  # 可以将其想成长度为9  词向量维度为9的一个样本
+    output_tensor = repeat(a, 'l h -> b l h', b=5)
+    # 将a整体重复5遍。 这里的5可以看作是batch_size
+    print(output_tensor.size())  # torch.Size([5, 9, 9])
+
+    a = torch.randn(3, 9, 9)  # 假设我们想把每条数据重复五遍
+    output_tensor = repeat(a, 'b l h -> b new_axis l h', new_axis=5)
+    print(output_tensor.size())  # torch.Size([3, 5, 9, 9])
+
+
+def func4():
+    # 沿着某个维度将其他维度平均
+    a = torch.randn(3, 4, 5)  # 假设这里的维度信息为: batch_size, max_len, hidden_size
+    # 我们现在要进行mean-pooling  也就是沿着第二个维度 对第三个维度进行平均
+    output_tensor = reduce(a, 'b l h -> b h', 'mean')
+    print(output_tensor.size())  # torch.Size([3, 5])
+
+    output_tensor = reduce(a, 'b l h -> b h', 'max')   # max-pooling
+    print(output_tensor.size())   # torch.Size([3, 5])
+
+    # 用reduce实现卷积网络中的池化
+    a = torch.randn(3, 3, 24, 24)  # 假设这里的维度信息为: batch_size, channel_size, width, height
+    # this is mean-pooling with 2x2 kernel
+    # image is split into 2x2 patches, each patch is averaged
+    output_tensor = reduce(a, 'b c (w w1) (h h1) -> b c w h', 'mean', h1=2, w1=2)
+    print(output_tensor.size())  # torch.Size([3, 3, 12, 12])
+
+
+if __name__ == '__main__':
+    # func1()
+    # func2()
+    # func3()
+    func4()
+
+```
