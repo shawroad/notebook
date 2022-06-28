@@ -18,6 +18,7 @@
 - [14. mseloss中引入相关性损失](#14-mseloss中引入相关性损失)
 - [15. pytorch中model.train和model.eval以及torch.no_grad()的含义](#15-pytorch中modeltrain和modeleval以及torchno_grad的含义)
 - [16. pytorch中张量之间的运算](#16-pytorch中张量之间的运算)
+- [17. labelsmooth的实现](#17-labelsmooth的实现)
 
 
 # 1. pytorch保存并加载checkpoint
@@ -1060,4 +1061,36 @@ if __name__ == '__main__':
     # func3()
     func4()
 
+```
+# 17. labelsmooth的实现
+```python
+import torch
+from torch import nn
+import torch.nn.functional as F
+
+
+class LabelSmoothingCrossEntropy(nn.Module):
+    def __init__(self, eps=0.1, reduction='mean'):
+        super(LabelSmoothingCrossEntropy, self).__init__()
+        self.eps = eps
+        self.reduction = reduction
+
+    def forward(self, output, target):
+        c = output.size()[-1]
+        log_preds = F.log_softmax(output, dim=-1)
+        if self.reduction == 'sum':
+            loss = -log_preds.sum()
+        else:
+            loss = -log_preds.sum(dim=-1)
+            if self.reduction == 'mean':
+                loss = loss.mean()
+        return loss * self.eps/c + (1 - self.eps) * F.nll_loss(log_preds, target, reduction=self.reduction)
+
+
+if __name__ == '__main__':
+    output = torch.randn(size=(5, 3))  # batch_size=5 label_nums=3
+    target = torch.tensor([0, 1, 2, 0, 2], dtype=torch.long)
+    loss_func = LabelSmoothingCrossEntropy()
+    loss = loss_func(output, target)
+    print(loss)
 ```
