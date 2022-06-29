@@ -4,7 +4,7 @@
 - [4. pandas针对某列的nan值删除以及位置索引的用法。](#4-pandas针对某列的nan值删除以及位置索引的用法)
 - [5. Jieba加入自定义的词进行分词](#5-jieba加入自定义的词进行分词)
 - [6. pandas使用concat对数据拼接并用loc对数据索引读取](#6-pandas使用concat对数据拼接并用loc对数据索引读取)
-- [7. 对dataframe数据按行进行shuffle操作](#7-对dataframe数据按行进行shuffle操作)
+- [7. 对dataframe数据按行进行shuffle操作或者切分训练验证集](#7-对dataframe数据按行进行shuffle操作或者切分训练验证集)
 - [8. 使用opencv操作视频的帧](#8-使用opencv操作视频的帧)
 - [9. 将图片通过base64转为字符串](#9-将图片通过base64转为字符串)
 
@@ -187,7 +187,7 @@ if __name__ == '__main__':
     print(data1.loc[1:3, :])
 ```
 
-# 7. 对dataframe数据按行进行shuffle操作
+# 7. 对dataframe数据按行进行shuffle操作或者切分训练验证集
 
 ```python
 import pandas as pd
@@ -197,7 +197,13 @@ from sklearn.utils import shuffle
 if __name__ == '__main__':
     data = pd.read_csv('supervised_train_data_9734.csv')
     data = shuffle(data)
-    data.to_csv('supervised_train_data_9734_shuffle.csv', index=False)    
+    data.to_csv('supervised_train_data_9734_shuffle.csv', index=False)
+    
+    train_size = 0.95
+    train_df = df.sample(frac=train_size, random_state=200)
+    val_df = df.drop(train_df.index).reset_index(drop=True)
+    train_df = train_df.reset_index(drop=True)
+    val_df = val_df.reset_index(drop=True)
 ```
 
 # 8. 使用opencv操作视频的帧
