@@ -29,6 +29,7 @@
 - [22. exec函数的使用](#22-exec函数的使用)
 - [23. python中map和filter以及sorted的用法](#23-python中map和filter以及sorted的用法)
 - [24. faiss召回的进一步优化](24-faiss召回的进一步优化)
+- [25. python中function的partial用法](25-python中function的partial用法)
   
 
 # 1. python中时间的处理: time和datetime
@@ -1010,4 +1011,35 @@ if __name__ == '__main__':
     print(faiss_index.is_trained)
     direct_search(faiss_index)
 
+```
+
+# 25. python中function的partial用法
+```python
+import requests
+from functools import partial
+
+
+def get_baidu(method, url):
+    response = requests.request(method=method, url=url)
+    return response.content
+
+
+# 最近在看paddle的一些官方案例时，反复用到partial  所以就来熟悉一下
+if __name__ == "__main__":
+    '''
+    functools.partial（func，*args， **关键字）
+    返回一个新的部分对象，当被调用时，其行为类似于使用位置参数args和关键字参数关键字调用的func。
+    如果为调用提供了更多参数，则将它们附加到args。如果提供了其他关键字参数，则它们会扩展和覆盖关键字。
+    简单说就是把一个函数, 和该函数所需传的参数封装到一个class。 'functools.partial'的类中, 简化以后的调用方式
+    '''
+
+    # demo1: 获取百度的html内容
+    res = get_baidu("get", "https://www.baidu.com")  # 正常调用
+    print(res)
+
+    # 将函数和参数封装到一个指定变量名中,下次执行直接调用加()
+    getBaidu = partial(get_baidu, "get", "https://www.baidu.com")
+    print(type(getBaidu))    # <class 'functools.partial'>
+    res = getBaidu()
+    print(res)
 ```
