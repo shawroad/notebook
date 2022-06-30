@@ -28,8 +28,8 @@
   - [多线程的使用](#多线程的使用)
 - [22. exec函数的使用](#22-exec函数的使用)
 - [23. python中map和filter以及sorted的用法](#23-python中map和filter以及sorted的用法)
-- [24. faiss召回的进一步优化](24-faiss召回的进一步优化)
-- [25. python中function的partial用法](25-python中function的partial用法)
+- [24. faiss召回的进一步优化](#24-faiss召回的进一步优化)
+- [25. python中function的partial用法](#25-python中function的partial用法)
   
 
 # 1. python中时间的处理: time和datetime
