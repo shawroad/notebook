@@ -7,6 +7,7 @@
 - [7. 对dataframe数据按行进行shuffle操作或者切分训练验证集](#7-对dataframe数据按行进行shuffle操作或者切分训练验证集)
 - [8. 使用opencv操作视频的帧](#8-使用opencv操作视频的帧)
 - [9. 将图片通过base64转为字符串](#9-将图片通过base64转为字符串)
+- [10. 分析标签的分布和文本的长度](#10-分析标签的分布和文本的长度)
 
 
 #  1. 解决pandas进行csv文件保存时出现乱码的问题
@@ -291,4 +292,48 @@ if __name__ == '__main__':
 
     # 2. 将字符串转为图片
     convert_str_to_image(save_path)
+```
+
+# 10. 分析标签的分布和文本的长度
+```python
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+if __name__ == '__main__':
+    # 分析标签分布 数据长度等
+    label_list, sent1_list, sent2_list = [], [], []
+    with open('train.tsv', 'r', encoding='utf8') as f:
+        lines = f.readlines()
+        for line in lines:
+            line = line.strip().split('\t')
+            label, s1, s2 = line
+            label_list.append(int(label))
+            sent1_list.append(s1)
+            sent2_list.append(s2)
+    df = pd.DataFrame({'sent1': sent1_list, 'sent2': sent2_list, 'label': label_list})
+    # print(df.head())
+
+    # 首先分析标签分布
+    df['label'].value_counts().plot(kind='pie', autopct='%.2f%%')   # 饼状图 显示占比
+    
+    '''
+    kind : str # 绘制图形的种类
+    ‘line’ : line plot (default)#折线图
+    ‘bar’ : vertical bar plot#条形图
+    ‘barh’ : horizontal bar plot#横向条形图
+    ‘hist’ : histogram#直方图
+    ‘box’ : boxplot#箱线图
+    ‘kde’ : Kernel Density Estimation plot#Kernel 的密度估计图，主要对柱状图添加Kernel 概率密度线
+    ‘density’ : same as ‘kde’
+    ‘area’ : area plot#不了解此图
+    ‘pie’ : pie plot#饼图
+    ‘scatter’ : scatter plot#散点图，只有数据为DataFrame格式才能传入此参数
+    ‘hexbin’ : hexbin plot#不了解此图，只有数据为DataFrame格式才能传入此参数
+    '''
+    
+    # 分析文本的长度分布
+    sns.displot(df['sent1'].apply(len))
+    plt.show()
+
 ```
