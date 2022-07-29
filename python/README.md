@@ -30,6 +30,7 @@
 - [23. python中map和filter以及sorted的用法](#23-python中map和filter以及sorted的用法)
 - [24. faiss召回的进一步优化](#24-faiss召回的进一步优化)
 - [25. python中function的partial用法](#25-python中function的partial用法)
+- [26. 迭代器和迭代器对象的区别](#26-迭代器和迭代器对象的区别)
   
 
 # 1. python中时间的处理: time和datetime
@@ -1042,4 +1043,43 @@ if __name__ == "__main__":
     print(type(getBaidu))    # <class 'functools.partial'>
     res = getBaidu()
     print(res)
+```
+
+# 26. 迭代器和迭代器对象的区别
+```python
+def get_hamburgers_return(qty):
+    hamburgers = ["汉堡" for h in range(qty)]
+    return hamburgers
+
+
+def get_hamburgers_yield(qty):
+    hamburgers = ("汉堡" for h in range(qty))
+    for h in hamburgers:
+        yield h
+
+
+if __name__ == '__main__':
+    hamburgers_return = get_hamburgers_return(1000000)
+    hamburgers_yield = get_hamburgers_yield(100000)
+
+    print(f"1000000个汉堡占用的普通函数空间 {hamburgers_return.__sizeof__()}。")
+    # 1000000个汉堡占用的普通函数空间 8697440。
+    print(f"1000000个汉堡占用的生成器空间 {hamburgers_yield.__sizeof__()}。")
+    # 1000000个汉堡占用的生成器空间 96。
+
+    '''
+    ["汉堡" for h in range(100)]是列表，是一个可迭代对象。
+    ("汉堡" for h in range(100))是一个迭代器。
+    
+    两句话复习下迭代器和可迭代对象的差别，
+    「迭代器是实现迭代器协议的对象，该协议由方法__iter__()和__next__()组成。」
+    「可迭代对象则只有__iter__()方法。」
+    '''
+
+    # 如果想取出每个数据  都是用for
+    # for i in hamburgers_return:
+    #     print(i)
+    # for i in hamburgers_yield:
+    #     print(i)
+
 ```
