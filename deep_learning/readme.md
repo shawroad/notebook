@@ -19,7 +19,7 @@
 - [15. pytorch中model.train和model.eval以及torch.no_grad()的含义](#15-pytorch中modeltrain和modeleval以及torchno_grad的含义)
 - [16. pytorch中张量之间的运算](#16-pytorch中张量之间的运算)
 - [17. labelsmooth的实现](#17-labelsmooth的实现)
-
+- [18. 预训练模型微调前加点噪声NoisyTune](#18-预训练模型微调前加点噪声noisytune)
 
 # 1. pytorch保存并加载checkpoint
 
@@ -1093,4 +1093,15 @@ if __name__ == '__main__':
     loss_func = LabelSmoothingCrossEntropy()
     loss = loss_func(output, target)
     print(loss)
+```
+# 18. 预训练模型微调前加点噪声NoisyTune
+```python
+# https://aclanthology.org/2022.acl-short.76.pdf
+import torch
+from transformers.models.bert import BertModel
+
+model = BertModel()
+noise_lambda = 0.1   # 0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3
+for name, para in model.named_parameters():
+    model.state_dict()[name][:] += (torch.rand(para.size() - 0.5) * noise_lambda * torch.std(para))   # 均匀分布*noise_lambda+方差
 ```
