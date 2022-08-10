@@ -21,6 +21,8 @@
 - [17. labelsmooth的实现](#17-labelsmooth的实现)
 - [18. 预训练模型微调前加点噪声NoisyTune](#18-预训练模型微调前加点噪声noisytune)
 - [19. 模型压缩](#19-模型压缩)
+  - [权重压缩](#权重压缩)
+  - [权重裁剪](#权重裁剪)
 
 # 1. pytorch保存并加载checkpoint
 
