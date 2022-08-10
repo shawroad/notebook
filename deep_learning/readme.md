@@ -20,6 +20,7 @@
 - [16. pytorch中张量之间的运算](#16-pytorch中张量之间的运算)
 - [17. labelsmooth的实现](#17-labelsmooth的实现)
 - [18. 预训练模型微调前加点噪声NoisyTune](#18-预训练模型微调前加点噪声noisytune)
+- [19. 模型压缩](#19-模型压缩)
 
 # 1. pytorch保存并加载checkpoint
 
@@ -1105,3 +1106,107 @@ noise_lambda = 0.1   # 0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3
 for name, para in model.named_parameters():
     model.state_dict()[name][:] += (torch.rand(para.size() - 0.5) * noise_lambda * torch.std(para))   # 均匀分布*noise_lambda+方差
 ```
+
+# 19. 模型压缩
+## 权重压缩
+将float32 变为float16
+```python
+import torch
+from transformers.models.bert import BertModel, BertConfig
+
+
+if __name__ == "__main__":
+    config = BertConfig.from_pretrained('./roberta_pretrain')
+    model = BertModel(config=config)
+
+    # 加载权重
+    # model.load_state_dict(torch.load('./roberta_pretrain/pytorch_model.bin'), strict=False)
+
+    # 半精度保存
+    params = torch.load('./roberta_pretrain/pytorch_model.bin')   # float32
+    for key in params.keys():
+        params[key] = params[key].half()  # float16
+    torch.save(params, './roberta_pretrain/pytorch_model_half.bin')
+
+    # 试着加载一下
+    model.load_state_dict(torch.load('./roberta_pretrain/pytorch_model_half.bin'), strict=False)
+    print(model)
+```
+
+## 权重裁剪
+在模型训练完成后可以考虑对冗余的权重进行裁剪，有以下几种裁剪方法：
+- 按照比例随机裁剪
+- 按照权重大小裁剪
+https://pytorch.org/tutorials/intermediate/pruning_tutorial.html
+
+在使用权重裁剪需要注意：
+- 权重裁剪并不会改变模型的权重大小，只是增加了稀疏性；
+- 权重裁剪并不会减少模型的预测速度，只是减少了计算量；
+- 权重裁剪的参数比例会对模型精度有影响，需要测试和验证；
+
+```python
+import torch
+import torch.nn.utils.prune as prune
+from torch import nn
+import torch.nn.functional as F
+
+
+class LeNet(nn.Module):
+    def __init__(self):
+        super(LeNet, self).__init__()
+        # 1 input image channel, 6 output channels, 3x3 square conv kernel
+        self.conv1 = nn.Conv2d(1, 6, 3)
+        self.conv2 = nn.Conv2d(6, 16, 3)
+        self.fc1 = nn.Linear(16 * 5 * 5, 120)  # 5x5 image dimension
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 10)
+
+    def forward(self, x):
+        x = F.max_pool2d(F.relu(self.conv1(x)), (2, 2))
+        x = F.max_pool2d(F.relu(self.conv2(x)), 2)
+        x = x.view(-1, int(x.nelement() / x.shape[0]))
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
+
+def calc_sparsity(model):
+    # 计算模型稀疏性
+    score = 100. * float(torch.sum(model.conv1.weight == 0)) / float(model.conv1.weight.nelement())
+    return "Sparsity in conv1.weight: {:.2f}%".format(score)
+
+
+if __name__ == '__main__':
+    model = LeNet()
+    res = calc_sparsity(model)
+    print(res)   # Sparsity in conv1.weight: 0.00%
+
+    # 打印一下未修剪的conv1
+    module = model.conv1
+    # print(list(module.named_parameters()))
+    # print(list(module.named_buffers()))   # []   没有缓冲区
+
+    # 随机裁剪  剪掉30%的权重
+    prune.random_unstructured(module, name="weight", amount=0.3)
+    # print(list(module.named_parameters()))  # 其实 修剪后 参数还是不变的  有变化的是下面的缓冲区 会形成一个mask矩阵 代表剪掉哪些权重
+    # print(list(module.named_buffers()))   # []   没有缓冲区
+
+    # torch.nn.utils.prune（通过将掩码与原始参数组合）并将它们存储在属性中weight
+    # print(module.weight)
+
+    # print(model.state_dict().keys())
+    '''
+    odict_keys(['conv1.bias', 'conv1.weight_orig', 'conv1.weight_mask', 'conv2.weight', 'conv2.bias', 'fc1.weight', 'fc1.bias', 'fc2.weight', 'fc2.bias', 'fc3.weight', 'fc3.bias'])
+    可以看出  加了 'conv1.weight_orig', 'conv1.weight_mask'
+    '''
+    res = calc_sparsity(model)
+    print(res)   # Sparsity in conv1.weight: 29.63%
+    
+    # 另外的几种裁剪方式
+    # l1_unstructured裁剪
+    prune.l1_unstructured(module, name="weight", amount=0.3)
+    # ln_structured裁剪
+    prune.ln_structured(module, name="weight", amount=0.5, n=2, dim=0)
+```
+
