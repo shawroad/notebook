@@ -23,6 +23,7 @@
 - [19. 模型压缩](#19-模型压缩)
   - [权重压缩](#权重压缩)
   - [权重裁剪](#权重裁剪)
+- [20.各种注意力机制](#20-各种注意力机制)
 
 # 1. pytorch保存并加载checkpoint
 
@@ -1212,3 +1213,104 @@ if __name__ == '__main__':
     prune.ln_structured(module, name="weight", amount=0.5, n=2, dim=0)
 ```
 
+
+# 20 各种注意力机制
+```python
+import torch
+import torch.nn as nn
+import math
+import torch.nn.functional as F
+
+
+# 加性注意力机制
+class AddAttention(nn.Module):
+    def __init__(self, q_size, k_size, v_size, seq_len):
+        # q、k、v的维度，seq_len每句话中词的数量
+        super(AddAttention, self).__init__()
+        self.linear_W = nn.Linear(k_size, k_size)
+        self.linear_U = nn.Linear(q_size, q_size)
+
+        self.linear_v = nn.Linear(v_size, seq_len)
+        self.tanh = nn.Tanh()
+
+    def forward(self, query, key, value, dropout=None):
+        key = self.linear_W(key)
+        query = self.linear_U(query)
+
+        k_q = self.tanh(query + key)
+        alpha = self.linear_v(k_q)   # 映射成seq_len 代表每个权重  (8, 10, 10)
+        alpha = F.softmax(alpha, dim=-1)
+        out = torch.bmm(alpha, value)
+        return out, alpha
+
+
+# 点积注意力
+class DotAttention(nn.Module):
+    def __init__(self):
+        super(DotAttention, self).__init__()
+
+    def forward(self, query, key, value, dropout=None):
+        alpha = torch.bmm(query, key.transpose(-1, -2))
+        # print(alpha.size())   # torch.Size([8, 10, 10])
+        alpha = F.softmax(alpha, dim=-1)
+        out = torch.bmm(alpha, value)
+        return out, alpha
+
+
+# 缩放点积注意力
+class ScaleDotAttention(nn.Module):
+    def __init__(self):
+        # q、k、v的维度，seq_len每句话中词的数量
+        super(ScaleDotAttention, self).__init__()
+
+    def forward(self, query, key, value, dropout=None):
+        d = k.size(-1)
+        alpha = torch.bmm(query, key.transpose(-1, -2)) / math.sqrt(d)
+        alpha = F.softmax(alpha, dim=-1)
+        out = torch.bmm(alpha, value)
+        return out, alpha
+
+
+# 双线性注意力
+class BiLinearAttention(nn.Module):
+    def __init__(self, x_size):
+        # seq_len每句话中词的数量
+        super(BiLinearAttention, self).__init__()
+        self.linear_W = nn.Linear(x_size, x_size)
+
+    def forward(self, query, key, value, dropout=None):
+        alpha = torch.bmm(query, self.linear_W(key).transpose(-1, -2))
+        alpha = F.softmax(alpha, dim=-1)
+        out = torch.bmm(alpha, value)
+        return out, alpha
+
+
+if __name__ == '__main__':
+    # 1. 加性注意力机制
+    # attn1 = AddAttention(100, 100, 100, 10)
+    # q = k = v = torch.randn((8, 10, 100))  # 可以理解为有8句话，每句话有10个词，每个词用100维的向量来表示
+    # out, attn = attn1(q, k, v)
+    # print(out.shape)    # torch.Size([8, 10, 100])
+    # print(attn.shape)    # torch.Size([8, 10, 10])
+
+    # 2. 点积式注意力机制
+    # attn2 = DotAttention()
+    # q = k = v = torch.randn((8, 10, 100))
+    # out, attn = attn2(q, k, v)
+    # print(out.shape)
+    # print(attn.shape)
+
+    # 3. 缩放点积式注意力机制
+    # attn3 = ScaleDotAttention()
+    # q = k = v = torch.randn((8, 10, 100))
+    # out, attn = attn3(q, k, v)
+    # print(out.shape)
+    # print(attn.shape)
+    
+    # 4. 双线性
+    attn4 = BiLinearAttention(100)
+    q = k = v = torch.randn((8, 10, 100))
+    out, attn = attn4(q, k, v)
+    print(out.shape)
+    print(attn.shape)
+```
