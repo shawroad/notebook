@@ -31,6 +31,7 @@
 - [24. faiss召回的进一步优化](#24-faiss召回的进一步优化)
 - [25. python中function的partial用法](#25-python中function的partial用法)
 - [26. 迭代器和迭代器对象的区别](#26-迭代器和迭代器对象的区别)
+- [27. duckduckgo的使用](#27-duckduckgo的使用)
   
 
 # 1. python中时间的处理: time和datetime
@@ -1081,5 +1082,57 @@ if __name__ == '__main__':
     #     print(i)
     # for i in hamburgers_yield:
     #     print(i)
+
+```
+
+# 27. duckduckgo的使用
+```python
+from duckduckgo_search import ddg_suggestions
+from duckduckgo_search import ddg_translate, ddg, ddg_news
+
+
+if __name__ == '__main__':
+    # 1. 获取对应的词条
+    print('推荐词条:', ddg_suggestions("周杰伦"))
+    # 推荐词条: [{'phrase': '周杰伦'}, {'phrase': '周杰伦概念股首日大涨23%'}, {'phrase': '周杰伦郭艾伦合唱稻香'},
+    # {'phrase': '周杰伦下厨做情人节大餐'}, {'phrase': '周杰伦演唱会'}, {'phrase': '周杰伦歌曲'}, {'phrase': '周杰伦歌曲免费听'},
+    # {'phrase': '周杰伦演唱会2023'}]
+
+    # 2. 翻译
+    print("翻译: \n", ddg_translate("西安是世界古都。", to="en"))
+    #  {'detected_language': 'zh-Hans',
+    #   'translated': "Xi'an is the ancient capital of the world.",
+    #   'original': '西安是世界古都。'}
+
+    # 3. 搜索网页
+    r = ddg("北京水灾", max_results=5)
+    for page in r:
+        print("page: \n", page, "\n")
+        # {'title': '局部地区洪水等次生灾害风险仍较大 北京暴雨最新动态一览',
+        #  'href': 'http://health.people.com.cn/n1/2023/0801/c14739-40048238.html',
+        #  'body': '7月31日下午，网传持续强降雨致卢沟桥坍塌。 经核实，因为永定河分洪，造成了卢沟桥西侧的小清河桥部分坍塌，并非卢沟桥塌陷。
+        #           因持续降暴雨，铁路线路封闭，K396、K1178、Z180三辆列车被长时间滞留进京途中。 其中K1178次列车滞留在门头沟区沿河城附
+        #           近，由于所在位置地势较高，旅客就地在车上等待救援。 此外，7月31日，北京房山区升级发布地质灾害气象风险红色预警；北京
+        #           地铁7号线7月31日晚延长运营1小时，以便做好夜间北京西站旅客接驳服务；7月31日自即时起至另有通知时止，地铁大兴机场线全
+        #           线停运；北京丰台小清河桥局部垮塌致五车坠河，初步判断无人员落水。 据北京市防汛抗旱指挥部消息，截至8月1日6时，此轮强
+        #           降雨已经造成11人遇难，包括门头沟区4人、昌平区4人、房山区2人、海淀区1人。'}
+
+    # 4. 搜索新闻
+    print("搜索新闻:\n", ddg_news("北京水灾", safesearch='Off', time='d', max_results=5))
+    # [{'date': '2023-08-09T12:04:00',
+    #   'title': '北京大洪水，《明史》和《清史》有记录，有的暴雨持续1个月',
+    #   'body': '根据最权威和最详实的史料来源，例如明清时期的《明史》《清史》《清史稿》等，新中国成立后的《北京市志》《北京市年鉴》等，
+    #            记录了北京历史上发生过的各种水灾的时间、规模、影响和应对措施。',
+    #   'url': 'https://www.sohu.com/a/710330992_121772077',
+    #   'image': None,
+    #   'source': '搜狐'},
+    #  {'date': '2023-08-10T03:55:00',
+    #   'title': '暴雨过后的环北京经济圈',
+    #   'body': '分析一下经济数据可以看到南北方县城的差距，在环北京的这16个县城里，这次水灾最为严重的涿州市2022年GDP总量为400亿元。
+    #            在环北京16县市中排名第三，仅次于天津武清区890亿和廊坊北三县中三河市的610亿元。 然而无论是三河还是涿州，在全国都很难
+    #            排进百强县的行列。要是昆山、江阴那些江苏经济强县相比，经济体量的差距几乎要在达到10倍。',
+    #   'url': 'https://www.163.com/dy/article/IBPDICQD0519D9A7.html',
+    #   'image': None,
+    #   'source': '网易'}]
 
 ```
